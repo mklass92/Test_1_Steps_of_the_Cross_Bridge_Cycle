@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Cross-Bridge Cycle — Practice</title>
+<style>
+  :root{
+    --red:#AB0520;
+    --red-dark:#7A0417;
+    --blue:#0C234B;
+    --blue-light:#1B3B6F;
+    --bg:#F6F4EF;
+    --surface:#FFFFFF;
+    --ink:#1A1A1A;
+    --muted:#5B6472;
+    --line:#DEE2E6;
+    --good:#1E7B34;
+    --good-bg:#E8F3EA;
+    --bad:#AB0520;
+    --bad-bg:#FBE9EC;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{
+    font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;
+    color:var(--blue);
+    margin:0 0 .4em 0;
+    line-height:1.15;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+  a{color:var(--red-dark);}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    background:var(--blue);
+    color:#fff;
+    border-top:6px solid var(--red);
+  }
+  .hero-inner{padding:44px 24px 36px;max-width:1080px;margin:0 auto;}
+  .hero h1{color:#fff;font-size:2.1rem;margin-bottom:.25em;}
+  .hero p{color:#C9D3E3;max-width:640px;margin:0;font-size:1.02rem;}
+  .hero .tag{
+    display:inline-block;font-size:.78rem;letter-spacing:.03em;color:#C9D3E3;
+    border:1px solid #3A517A;padding:3px 10px;border-radius:20px;margin-bottom:14px;
+  }
+
+  section{padding:40px 0;border-bottom:1px solid var(--line);}
+  section:last-of-type{border-bottom:none;}
+  .section-label{color:var(--red);font-weight:700;font-size:.8rem;letter-spacing:.02em;margin-bottom:6px;}
+  .lede{color:var(--muted);max-width:680px;}
+
+  /* ---------- Overview list ---------- */
+  .steps-list{list-style:none;margin:28px 0 0;padding:0;counter-reset:step;}
+  .steps-list li{
+    counter-increment:step;
+    display:grid;
+    grid-template-columns:56px 1fr;
+    gap:16px;
+    padding:16px 0;
+    border-top:1px solid var(--line);
+  }
+  .steps-list li:first-child{border-top:none;}
+  .steps-list li::before{
+    content:counter(step);
+    font-family:Georgia,serif;
+    font-size:1.7rem;
+    color:var(--red);
+    line-height:1;
+  }
+  .steps-list h3{font-size:1.05rem;margin-bottom:.2em;}
+  .steps-list p{margin:0;color:var(--muted);font-size:.96rem;max-width:620px;}
+
+  /* ---------- Figure ---------- */
+  .figure-grid{display:grid;grid-template-columns:1fr;gap:28px;margin-top:28px;}
+  @media(min-width:860px){.figure-grid{grid-template-columns:1.15fr 1fr;align-items:start;}}
+  .cycle-stage{
+    position:relative;
+    width:100%;
+    aspect-ratio:1/1;
+    max-width:460px;
+    margin:0 auto;
+  }
+  .cycle-ring{
+    position:absolute;inset:6%;
+    border:2px dashed #C7CEDB;
+    border-radius:50%;
+  }
+  .node{
+    position:absolute;
+    width:118px;
+    transform:translate(-50%,-50%);
+    background:var(--surface);
+    border:2px solid var(--line);
+    border-radius:10px;
+    padding:6px 6px 8px;
+    cursor:pointer;
+    text-align:center;
+    box-shadow:0 1px 2px rgba(12,35,75,.06);
+  }
+  .node:hover{border-color:var(--blue-light);}
+  .node.active{border-color:var(--red);box-shadow:0 0 0 3px rgba(171,5,32,.15);}
+  .node .node-num{
+    position:absolute;top:-10px;left:-10px;
+    width:24px;height:24px;border-radius:50%;
+    background:var(--blue);color:#fff;
+    font-size:.78rem;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .node.active .node-num{background:var(--red);}
+  .node svg{width:100%;height:auto;display:block;}
+  .node .node-label{font-size:.72rem;color:var(--muted);margin-top:2px;}
+
+  .detail-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:22px 24px;
+    min-height:230px;
+  }
+  .detail-card h3{font-size:1.1rem;color:var(--red-dark);}
+  .detail-card p{color:var(--ink);font-size:.97rem;}
+  .chip-row{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{
+    font-size:.75rem;font-weight:600;
+    padding:4px 10px;border-radius:20px;
+    background:#EDF1F7;color:var(--blue);
+    border:1px solid #D5DEEA;
+  }
+  .chip.ca{background:#FBE9EC;color:var(--red-dark);border-color:#F3C6CE;}
+
+  /* ---------- Activities shared ---------- */
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-top:18px;}
+  .pick-card{
+    background:var(--surface);
+    border:2px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    cursor:pointer;
+    text-align:left;
+    font-size:.88rem;
+    transition:border-color .15s ease;
+  }
+  .pick-card:hover{border-color:var(--blue-light);}
+  .pick-card[disabled]{opacity:.35;cursor:not-allowed;}
+  .pick-card.armed{border-color:var(--red);box-shadow:0 0 0 3px rgba(171,5,32,.15);}
+  .pick-card.correct{border-color:var(--good);background:var(--good-bg);}
+  .pick-card.incorrect{border-color:var(--bad);background:var(--bad-bg);}
+  .pick-card svg{width:100%;height:auto;display:block;margin-bottom:6px;}
+  .pick-card .badge{
+    display:inline-block;background:var(--blue);color:#fff;
+    font-size:.7rem;border-radius:12px;padding:1px 9px;margin-bottom:6px;
+  }
+  .tray{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:14px;
+    min-height:64px;
+  }
+  @media(max-width:700px){.tray{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}}
+  .tray-slot{
+    border:2px dashed var(--line);border-radius:10px;
+    min-height:64px;display:flex;align-items:center;justify-content:center;
+    font-size:.8rem;color:var(--muted);text-align:center;padding:6px;
+  }
+  .tray-slot.filled{border-style:solid;cursor:pointer;background:var(--surface);color:var(--ink);}
+  .tray-slot.correct{border-color:var(--good);background:var(--good-bg);}
+  .tray-slot.incorrect{border-color:var(--bad);background:var(--bad-bg);}
+  .tray-slot .pos{font-weight:700;color:var(--blue);margin-right:6px;}
+
+  .match-cols{display:grid;grid-template-columns:1fr;gap:26px;margin-top:18px;}
+  @media(min-width:800px){.match-cols{grid-template-columns:1fr 1fr;}}
+  .match-label{
+    background:var(--surface);border:2px solid var(--line);border-radius:10px;
+    padding:12px 14px;cursor:pointer;font-size:.9rem;margin-bottom:10px;
+  }
+  .match-label:hover{border-color:var(--blue-light);}
+  .match-label.used{opacity:.55;}
+  .match-label.correct{border-color:var(--good);background:var(--good-bg);}
+  .match-label.incorrect{border-color:var(--bad);background:var(--bad-bg);}
+  .assigned-chip{
+    margin-top:8px;font-size:.78rem;background:#EDF1F7;color:var(--blue);
+    border-radius:8px;padding:5px 8px;
+  }
+
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center;}
+  button.action{
+    font-family:inherit;font-size:.88rem;font-weight:600;
+    padding:10px 18px;border-radius:8px;border:2px solid var(--blue);
+    background:var(--blue);color:#fff;cursor:pointer;
+  }
+  button.action.secondary{background:#fff;color:var(--blue);}
+  button.action:hover{filter:brightness(1.08);}
+  button.action:focus-visible, .pick-card:focus-visible, .node:focus-visible, .match-label:focus-visible{
+    outline:3px solid var(--red);outline-offset:2px;
+  }
+  .score-line{font-weight:700;color:var(--blue);font-size:.92rem;}
+  .hint{font-size:.82rem;color:var(--muted);margin-top:8px;min-height:1.2em;}
+
+  footer{padding:26px 0 48px;color:var(--muted);font-size:.82rem;}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <span class="tag">Muscle Physiology · Practice Module</span>
+    <h1>The Cross-Bridge Cycle</h1>
+    <p>Work through the five steps of cross-bridge cycling, explore the interactive figure, then test yourself by ordering the steps and matching them to the diagram.</p>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ===================== OVERVIEW ===================== -->
+  <section id="overview">
+    <div class="section-label">Overview</div>
+    <h2>Five steps, one repeating cycle</h2>
+    <p class="lede">Each time a sarcomere contracts, every myosin head repeats this cycle many times per second. Calcium determines whether the cycle can proceed past Step 3; ATP availability determines whether it can proceed past Step 1.</p>
+    <ol class="steps-list" id="overviewList"></ol>
+  </section>
+
+  <!-- ===================== FIGURE ===================== -->
+  <section id="figure">
+    <div class="section-label">Interactive Figure</div>
+    <h2>Myosin, actin, and the troponin–tropomyosin complex</h2>
+    <p class="lede">Select any stage on the wheel to see how the myosin head, the thin filament, and the troponin–tropomyosin complex change at that point in the cycle.</p>
+    <div class="figure-grid">
+      <div class="cycle-stage" id="cycleStage">
+        <div class="cycle-ring"></div>
+      </div>
+      <div class="detail-card" id="detailCard" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ===================== ACTIVITY 1: ORDER ===================== -->
+  <section id="activity-order">
+    <div class="section-label">Activity 1</div>
+    <h2>Put the steps in order</h2>
+    <p class="lede">Click the cards below in the order you think they occur, starting with Step 1. Click a card in "Your sequence" to send it back to the pool if you want to change your answer.</p>
+
+    <div class="card-grid" id="orderPool"></div>
+
+    <h3 style="margin-top:24px;font-size:1rem;">Your sequence</h3>
+    <div class="tray" id="orderTray"></div>
+
+    <div class="btn-row">
+      <button class="action" id="checkOrderBtn">Check order</button>
+      <button class="action secondary" id="resetOrderBtn">Reset</button>
+      <span class="score-line" id="orderScore"></span>
+    </div>
+    <div class="hint" id="orderHint"></div>
+  </section>
+
+  <!-- ===================== ACTIVITY 2: MATCH ===================== -->
+  <section id="activity-match">
+    <div class="section-label">Activity 2</div>
+    <h2>Match each image to its step</h2>
+    <p class="lede">Select an image, then select the step description it belongs with. Select a new image to change an answer at any time.</p>
+
+    <div class="match-cols">
+      <div>
+        <h3 style="font-size:1rem;">Images</h3>
+        <div class="card-grid" id="matchImages"></div>
+      </div>
+      <div>
+        <h3 style="font-size:1rem;">Step descriptions</h3>
+        <div id="matchLabels"></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="action" id="checkMatchBtn">Check matches</button>
+      <button class="action secondary" id="resetMatchBtn">Reset</button>
+      <span class="score-line" id="matchScore"></span>
+    </div>
+    <div class="hint" id="matchHint"></div>
+  </section>
+
+  <footer>
+    Built for classroom review of the cross-bridge cycle. Figures are schematic and simplified for teaching purposes, not drawn to scale.
+  </footer>
+</div>
+
+<script>
+/* ===================== STEP DATA & ICON GENERATOR ===================== */
+
+function iconSVG(cfg){
+  // cfg: headAngle, bound, tropShift (0 covering /1 shifted), calcium, nucleotide, actinOffset, rigor
+  var pivotX = 118, pivotY = 34;
+  var headFill = cfg.bound ? '#AB0520' : '#9AA5B1';
+  var tropDy = cfg.tropShift ? -7 : 0;
+  var tropOpacity = cfg.tropShift ? 0.55 : 0.95;
+  var actinCx = [14,38,62,86,110,134,158];
+  var ax = -cfg.actinOffset;
+
+  var actinCircles = actinCx.map(function(cx,i){
+    var exposed = cfg.tropShift && (i===2 || i===3);
+    return '<circle cx="'+cx+'" cy="70" r="9" fill="#0C234B"'+
+      (exposed ? ' stroke="#AB0520" stroke-width="2"' : '') + '/>';
+  }).join('');
+
+  var caGroup = '';
+  if(cfg.calcium){
+    caGroup = '<circle cx="66" cy="52" r="4.5" fill="#AB0520"/>' +
+              '<circle cx="80" cy="52" r="4.5" fill="#AB0520"/>' +
+              '<text x="73" y="44" font-size="9" text-anchor="middle" fill="#AB0520" font-weight="700">Ca\u00B2\u207A</text>';
+  }
+
+  var nucLabel = cfg.nucleotide ?
+    '<text x="'+pivotX+'" y="14" font-size="10" text-anchor="middle" fill="#0C234B" font-weight="700">'+cfg.nucleotide+'</text>' : '';
+
+  var rigorLabel = cfg.rigor ?
+    '<text x="'+pivotX+'" y="14" font-size="9" text-anchor="middle" fill="#5B6472" font-style="italic">no nucleotide</text>' : '';
+
+  return '<svg viewBox="0 0 190 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">'+
+    '<g transform="translate('+ax+',0)">'+
+      '<line x1="6" y1="70" x2="166" y2="70" stroke="#0C234B" stroke-width="2"/>'+
+      '<rect x="6" y="'+(63+tropDy)+'" width="160" height="7" rx="3.5" fill="#1B3B6F" opacity="'+tropOpacity+'"/>'+
+      actinCircles+
+      caGroup+
+    '</g>'+
+    '<line x1="'+pivotX+'" y1="18" x2="'+pivotX+'" y2="34" stroke="#0C234B" stroke-width="4"/>'+
+    '<g transform="rotate('+cfg.headAngle+' '+pivotX+' '+pivotY+')">'+
+      '<line x1="'+pivotX+'" y1="'+pivotY+'" x2="'+(pivotX+34)+'" y2="'+pivotY+'" stroke="'+headFill+'" stroke-width="3"/>'+
+      '<ellipse cx="'+(pivotX+40)+'" cy="'+pivotY+'" rx="11" ry="7" fill="'+headFill+'"/>'+
+    '</g>'+
+    nucLabel + rigorLabel +
+  '</svg>';
+}
+
+var STEPS = [
+  {
+    id:1, label:'ATP Binding & Detachment',
+    short:'ATP binds the myosin head, releasing it from actin.',
+    detail:'A new molecule of ATP binds the myosin head. This lowers myosin\u2019s affinity for actin, so the cross-bridge breaks and the head detaches from the thin filament.',
+    chips:['ATP binds'],
+    icon:iconSVG({headAngle:-8, bound:false, tropShift:0, calcium:false, nucleotide:'ATP', actinOffset:0})
+  },
+  {
+    id:2, label:'ATP Hydrolysis & Cocking',
+    short:'ATP is hydrolyzed; the myosin head cocks into a high-energy position.',
+    detail:'Myosin\u2019s ATPase activity splits ATP into ADP and inorganic phosphate (Pi). The energy released re-cocks the myosin head into a high-energy \u201cready\u201d position, with ADP and Pi still attached.',
+    chips:['ATP \u2192 ADP + Pi'],
+    icon:iconSVG({headAngle:-52, bound:false, tropShift:0, calcium:false, nucleotide:'ADP + Pi', actinOffset:0})
+  },
+  {
+    id:3, label:'Calcium Binding & Cross-Bridge Formation',
+    short:'Ca\u00B2\u207A binds troponin; tropomyosin shifts and myosin attaches to actin.',
+    detail:'When the sarcoplasmic reticulum releases Ca\u00B2\u207A, calcium binds troponin C. This shifts the troponin\u2013tropomyosin complex away from the myosin-binding sites on actin, and the cocked myosin head attaches, forming a cross-bridge.',
+    chips:['Ca\u00B2\u207A binds troponin','Site exposed'],
+    icon:iconSVG({headAngle:-52, bound:true, tropShift:1, calcium:true, nucleotide:'ADP + Pi', actinOffset:0})
+  },
+  {
+    id:4, label:'Power Stroke',
+    short:'Pi is released; the head pivots and pulls actin toward the M-line.',
+    detail:'Release of Pi triggers the power stroke: the myosin head pivots toward the M-line, dragging the thin filament along the thick filament. ADP is released near the end of the stroke, and the sarcomere shortens slightly.',
+    chips:['Pi released','ADP released'],
+    icon:iconSVG({headAngle:6, bound:true, tropShift:1, calcium:true, nucleotide:'', actinOffset:22})
+  },
+  {
+    id:5, label:'Rigor — Awaiting New ATP',
+    short:'Myosin stays tightly bound to actin until a new ATP binds.',
+    detail:'With no nucleotide bound, myosin remains locked tightly to actin (the rigor state). The cycle continues only once a new ATP molecule binds the myosin head, which restarts the cycle at Step 1.',
+    chips:['No nucleotide','Rigor'],
+    icon:iconSVG({headAngle:6, bound:true, tropShift:1, calcium:true, nucleotide:'', actinOffset:22, rigor:true})
+  }
+];
+
+var NODE_POS = [
+  {x:50,y:11},{x:86.5,y:38.5},{x:72,y:81},{x:28,y:81},{x:13.5,y:38.5}
+];
+
+function shuffled(arr){
+  var a = arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var t=a[i]; a[i]=a[j]; a[j]=t;
+  }
+  return a;
+}
+
+/* ===================== OVERVIEW ===================== */
+(function(){
+  var ol = document.getElementById('overviewList');
+  STEPS.forEach(function(s){
+    var li = document.createElement('li');
+    li.innerHTML = '<div><h3>'+s.label+'</h3><p>'+s.short+'</p></div>';
+    ol.appendChild(li);
+  });
+})();
+
+/* ===================== FIGURE / CYCLE WHEEL ===================== */
+(function(){
+  var stage = document.getElementById('cycleStage');
+  var detail = document.getElementById('detailCard');
+
+  STEPS.forEach(function(s, i){
+    var pos = NODE_POS[i];
+    var node = document.createElement('div');
+    node.className = 'node';
+    node.tabIndex = 0;
+    node.style.left = pos.x+'%';
+    node.style.top = pos.y+'%';
+    node.setAttribute('role','button');
+    node.setAttribute('aria-label','Step '+s.id+': '+s.label);
+    node.innerHTML = '<span class="node-num">'+s.id+'</span>'+s.icon+'<div class="node-label">'+s.label+'</div>';
+    node.addEventListener('click', function(){ selectStep(s.id); });
+    node.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectStep(s.id);} });
+    stage.appendChild(node);
+  });
+
+  function selectStep(id){
+    var step = STEPS.filter(function(s){return s.id===id;})[0];
+    Array.prototype.forEach.call(stage.querySelectorAll('.node'), function(n,i){
+      n.classList.toggle('active', STEPS[i].id===id);
+    });
+    var chipsHtml = step.chips.map(function(c){
+      return '<span class="chip'+(c.indexOf('Ca')===0?' ca':'')+'">'+c+'</span>';
+    }).join('');
+    detail.innerHTML = '<h3>Step '+step.id+' \u2014 '+step.label+'</h3><p>'+step.detail+'</p><div class="chip-row">'+chipsHtml+'</div>';
+  }
+
+  selectStep(1);
+})();
+
+/* ===================== ACTIVITY 1: ORDER THE STEPS ===================== */
+(function(){
+  var pool = shuffled(STEPS);
+  var sequence = []; // array of step ids in chosen order
+  var checked = false;
+
+  var poolEl = document.getElementById('orderPool');
+  var trayEl = document.getElementById('orderTray');
+  var scoreEl = document.getElementById('orderScore');
+  var hintEl = document.getElementById('orderHint');
+
+  function render(){
+    poolEl.innerHTML = '';
+    pool.forEach(function(s){
+      var inSeq = sequence.indexOf(s.id) !== -1;
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'pick-card';
+      if(inSeq) card.setAttribute('disabled','disabled');
+      card.innerHTML = s.icon + '<div>'+s.label+'</div>';
+      card.addEventListener('click', function(){
+        if(inSeq || checked) return;
+        sequence.push(s.id);
+        checked = false;
+        render();
+      });
+      poolEl.appendChild(card);
+    });
+
+    trayEl.innerHTML = '';
+    for(var i=0;i<5;i++){
+      var slot = document.createElement('div');
+      if(sequence[i]){
+        var id = sequence[i];
+        var step = STEPS.filter(function(x){return x.id===id;})[0];
+        slot.className = 'tray-slot filled';
+        slot.innerHTML = '<span class="pos">'+(i+1)+'.</span>'+step.label;
+        slot.addEventListener('click', function(sid){
+          return function(){
+            if(checked) return;
+            var idx = sequence.indexOf(sid);
+            if(idx!==-1) sequence.splice(idx,1);
+            render();
+          };
+        }(id));
+      } else {
+        slot.className = 'tray-slot';
+        slot.textContent = (i+1)+'.';
+      }
+      trayEl.appendChild(slot);
+    }
+  }
+
+  document.getElementById('checkOrderBtn').addEventListener('click', function(){
+    if(sequence.length < 5){
+      hintEl.textContent = 'Place all five steps in your sequence before checking.';
+      return;
+    }
+    checked = true;
+    var correctCount = 0;
+    Array.prototype.forEach.call(trayEl.children, function(slot, i){
+      var isCorrect = sequence[i] === (i+1);
+      slot.classList.remove('correct','incorrect');
+      slot.classList.add(isCorrect ? 'correct' : 'incorrect');
+      if(isCorrect) correctCount++;
+    });
+    scoreEl.textContent = correctCount + ' of 5 in the correct position.';
+    hintEl.textContent = correctCount === 5 ? 'Nice work \u2014 that\u2019s the correct order.' : 'Review the highlighted steps, then reset to try again.';
+  });
+
+  document.getElementById('resetOrderBtn').addEventListener('click', function(){
+    sequence = [];
+    checked = false;
+    scoreEl.textContent = '';
+    hintEl.textContent = '';
+    render();
+  });
+
+  render();
+})();
+
+/* ===================== ACTIVITY 2: MATCH IMAGES TO STEPS ===================== */
+(function(){
+  var images = shuffled(STEPS);
+  var labels = shuffled(STEPS);
+  var pairs = {}; // imageId -> labelId
+  var armedImageId = null;
+  var checked = false;
+
+  var imagesEl = document.getElementById('matchImages');
+  var labelsEl = document.getElementById('matchLabels');
+  var scoreEl = document.getElementById('matchScore');
+  var hintEl = document.getElementById('matchHint');
+
+  function labelById(id){ return STEPS.filter(function(s){return s.id===id;})[0]; }
+
+  function render(){
+    imagesEl.innerHTML = '';
+    images.forEach(function(s){
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'pick-card' + (armedImageId===s.id ? ' armed' : '');
+      var pairedLabel = pairs[s.id] ? labelById(pairs[s.id]).label : null;
+      card.innerHTML = s.icon + (pairedLabel ? '<div class="assigned-chip">Matched: '+pairedLabel+'</div>' : '<div class="hint" style="margin-top:6px;">Not matched</div>');
+      card.addEventListener('click', function(){
+        if(checked) return;
+        armedImageId = (armedImageId===s.id) ? null : s.id;
+        hintEl.textContent = armedImageId ? 'Now select the step description that matches this image.' : '';
+        render();
+      });
+      imagesEl.appendChild(card);
+    });
+
+    labelsEl.innerHTML = '';
+    labels.forEach(function(s){
+      var usedBy = Object.keys(pairs).filter(function(k){return pairs[k]===s.id;})[0];
+      var div = document.createElement('button');
+      div.type = 'button';
+      div.className = 'match-label' + (usedBy ? ' used' : '');
+      div.textContent = s.label;
+      div.addEventListener('click', function(){
+        if(checked) return;
+        if(armedImageId===null){
+          hintEl.textContent = 'Select an image first, then choose its matching description.';
+          return;
+        }
+        Object.keys(pairs).forEach(function(k){ if(pairs[k]===s.id) delete pairs[k]; });
+        pairs[armedImageId] = s.id;
+        armedImageId = null;
+        hintEl.textContent = '';
+        render();
+      });
+      labelsEl.appendChild(div);
+    });
+  }
+
+  document.getElementById('checkMatchBtn').addEventListener('click', function(){
+    if(Object.keys(pairs).length < 5){
+      hintEl.textContent = 'Match all five images before checking.';
+      return;
+    }
+    checked = true;
+    var correctCount = 0;
+    Array.prototype.forEach.call(imagesEl.children, function(card, i){
+      var s = images[i];
+      var isCorrect = pairs[s.id] === s.id;
+      card.classList.remove('correct','incorrect','armed');
+      card.classList.add(isCorrect ? 'correct' : 'incorrect');
+      if(isCorrect) correctCount++;
+    });
+    Array.prototype.forEach.call(labelsEl.children, function(div, i){
+      var s = labels[i];
+      var usedBy = Object.keys(pairs).filter(function(k){return pairs[k]===s.id;})[0];
+      var isCorrect = usedBy && parseInt(usedBy,10) === s.id;
+      div.classList.remove('correct','incorrect');
+      div.classList.add(isCorrect ? 'correct' : 'incorrect');
+    });
+    scoreEl.textContent = correctCount + ' of 5 matched correctly.';
+    hintEl.textContent = correctCount === 5 ? 'All matched correctly.' : 'Review the highlighted pairs, then reset to try again.';
+  });
+
+  document.getElementById('resetMatchBtn').addEventListener('click', function(){
+    pairs = {};
+    armedImageId = null;
+    checked = false;
+    scoreEl.textContent = '';
+    hintEl.textContent = '';
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
